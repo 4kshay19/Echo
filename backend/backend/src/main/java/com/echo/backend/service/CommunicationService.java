@@ -7,11 +7,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class CommunicationService {
 
+    private final TranslationService translationService;
+
+    public CommunicationService(TranslationService translationService) {
+        this.translationService = translationService;
+    }
+
     public CommunicationResponse processMessage(
             CommunicationRequest request) {
 
         String translatedMessage =
-                "[Translation pending] " + request.getMessage();
+                translationService.translate(
+                        request.getMessage(),
+                        request.getSourceLanguage(),
+                        request.getTargetLanguage()
+                );
 
         return new CommunicationResponse(
                 request.getMessage(),
