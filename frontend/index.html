@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo - Real Time Communication</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar">
+
+        <div class="logo">
+            <div class="logo-icon">E</div>
+            <span>Echo</span>
+        </div>
+
+        <div class="search">
+            <input type="text" placeholder="Search conversations...">
+        </div>
+
+        <div class="section-title">CHATS</div>
+
+        <div class="chat active">
+            <div class="avatar">B</div>
+
+            <div class="chat-info">
+                <div class="chat-name">User B</div>
+                <div class="last-message">Hello!</div>
+            </div>
+
+            <div class="online"></div>
+        </div>
+
+        <div class="chat">
+            <div class="avatar">C</div>
+
+            <div class="chat-info">
+                <div class="chat-name">User C</div>
+                <div class="last-message">How are you?</div>
+            </div>
+
+            <div class="online"></div>
+        </div>
+
+        <div class="chat">
+            <div class="avatar">D</div>
+
+            <div class="chat-info">
+                <div class="chat-name">User D</div>
+                <div class="last-message">See you soon</div>
+            </div>
+        </div>
+
+    </aside>
+
+
+    <main class="chat-window">
+
+        <header class="chat-header">
+
+            <div class="user-details">
+
+                <div class="avatar large">
+                    B
+                </div>
+
+                <div>
+                    <h2>User B</h2>
+
+                    <span class="status">
+                        <span class="status-dot"></span>
+                        Online
+                    </span>
+                </div>
+
+            </div>
+
+            <div class="header-actions">
+
+                <button
+                    class="icon-button"
+                    onclick="startCall()"
+                    title="Voice Call">
+                    📞
+                </button>
+
+                <button class="icon-button" title="More">
+                    ⋮
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <section class="messages" id="messages">
+
+            <div class="date">
+                Today
+            </div>
+
+            <div class="message received">
+                <div class="bubble">
+                    Hello!
+                    <span class="time">10:20 AM</span>
+                </div>
+            </div>
+
+            <div class="message sent">
+                <div class="bubble">
+                    வணக்கம்!
+                    <span class="time">10:21 AM</span>
+                </div>
+            </div>
+
+            <div class="message received">
+                <div class="bubble">
+                    How are you?
+                    <span class="time">10:21 AM</span>
+                </div>
+            </div>
+
+            <div class="message sent">
+                <div class="bubble">
+                    I am good!
+                    <span class="time">10:22 AM</span>
+                </div>
+            </div>
+
+        </section>
+
+
+        <footer class="message-input">
+
+            <button class="input-button" onclick="addAttachment()">
+                ＋
+            </button>
+
+            <input
+                id="messageInput"
+                type="text"
+                placeholder="Type a message..."
+                onkeydown="handleEnter(event)"
+            >
+
+            <button
+                class="mic-button"
+                onclick="startVoiceInput()">
+                🎤
+            </button>
+
+            <button
+                class="send-button"
+                onclick="sendMessage()">
+                ➤
+            </button>
+
+        </footer>
+
+    </main>
+
+</div>
+
+
+<!-- Voice Call Modal -->
+
+<div class="call-overlay" id="callOverlay">
+
+    <div class="call-card">
+
+        <div class="call-avatar">
+            B
+        </div>
+
+        <h2 id="callUser">
+            User B
+        </h2>
+
+        <p id="callStatus">
+            Calling...
+        </p>
+
+        <div class="call-timer" id="callTimer">
+            00:00
+        </div>
+
+        <div class="call-controls">
+
+            <button
+                class="call-control"
+                onclick="toggleMute()"
+                id="muteButton">
+                🎤
+            </button>
+
+            <button
+                class="end-call"
+                onclick="endCall()">
+                📞
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+<audio
+    id="remoteAudio"
+    autoplay>
+</audio>
+<div class="incoming-overlay" id="incomingOverlay">
+
+    <div class="incoming-card">
+
+        <div class="incoming-avatar">
+            B
+        </div>
+
+        <h2>User B</h2>
+
+        <p>Incoming voice call...</p>
+
+        <div class="incoming-actions">
+
+            <button
+                class="accept-call"
+                onclick="acceptIncomingCall()">
+                📞
+            </button>
+
+            <button
+                class="reject-call"
+                onclick="rejectIncomingCall()">
+                📕
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>

@@ -2,25 +2,11 @@ package com.echo.backend.controller;
 
 import com.echo.backend.model.Call;
 import com.echo.backend.service.CallService;
-
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/calls")
-@CrossOrigin(
-        origins = {
-                "http://localhost:5500",
-                "http://127.0.0.1:5500"
-        },
-        allowedHeaders = "*",
-        methods = {
-                RequestMethod.GET,
-                RequestMethod.POST,
-                RequestMethod.PUT,
-                RequestMethod.DELETE,
-                RequestMethod.OPTIONS
-        }
-)
+@CrossOrigin(origins = "*")
 public class CallController {
 
     private final CallService callService;
@@ -42,6 +28,13 @@ public class CallController {
             @PathVariable String callId) {
 
         return callService.acceptCall(callId);
+    }
+
+    @PostMapping("/{callId}/reject")
+    public Call rejectCall(
+            @PathVariable String callId) {
+
+        return callService.rejectCall(callId);
     }
 
     @PostMapping("/{callId}/end")

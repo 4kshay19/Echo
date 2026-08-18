@@ -1,7 +1,6 @@
 package com.echo.backend.service;
 
 import com.echo.backend.model.Call;
-
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -31,24 +30,25 @@ public class CallService {
 
     public Call acceptCall(String callId) {
 
-        Call call = calls.get(callId);
-
-        if (call == null) {
-            throw new RuntimeException("Call not found");
-        }
+        Call call = getCall(callId);
 
         call.setStatus("CONNECTED");
 
         return call;
     }
 
+    public Call rejectCall(String callId) {
+
+        Call call = getCall(callId);
+
+        call.setStatus("REJECTED");
+
+        return call;
+    }
+
     public Call endCall(String callId) {
 
-        Call call = calls.get(callId);
-
-        if (call == null) {
-            throw new RuntimeException("Call not found");
-        }
+        Call call = getCall(callId);
 
         call.setStatus("ENDED");
 
@@ -60,7 +60,7 @@ public class CallService {
         Call call = calls.get(callId);
 
         if (call == null) {
-            throw new RuntimeException("Call not found");
+            throw new RuntimeException("Call not found: " + callId);
         }
 
         return call;
