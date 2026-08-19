@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/calls")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "http://127.0.0.1:5500")
 public class CallController {
 
     private final CallService callService;
@@ -24,29 +24,25 @@ public class CallController {
     }
 
     @PostMapping("/{callId}/accept")
-    public Call acceptCall(
-            @PathVariable String callId) {
+    public Call acceptCall(@PathVariable String callId) {
 
         return callService.acceptCall(callId);
     }
 
     @PostMapping("/{callId}/reject")
-    public Call rejectCall(
-            @PathVariable String callId) {
+    public Call rejectCall(@PathVariable String callId) {
 
         return callService.rejectCall(callId);
     }
 
     @PostMapping("/{callId}/end")
-    public Call endCall(
-            @PathVariable String callId) {
+    public Call endCall(@PathVariable String callId) {
 
         return callService.endCall(callId);
     }
 
     @GetMapping("/{callId}")
-    public Call getCall(
-            @PathVariable String callId) {
+    public Call getCall(@PathVariable String callId) {
 
         return callService.getCall(callId);
     }

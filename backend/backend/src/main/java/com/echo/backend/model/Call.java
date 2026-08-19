@@ -10,12 +10,7 @@ public class Call {
     public Call() {
     }
 
-    public Call(
-            String callId,
-            String callerId,
-            String receiverId,
-            String status) {
-
+    public Call(String callId, String callerId, String receiverId, String status) {
         this.callId = callId;
         this.callerId = callerId;
         this.receiverId = receiverId;

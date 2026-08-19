@@ -30,7 +30,11 @@ public class CallService {
 
     public Call acceptCall(String callId) {
 
-        Call call = getCall(callId);
+        Call call = calls.get(callId);
+
+        if (call == null) {
+            throw new RuntimeException("Call not found");
+        }
 
         call.setStatus("CONNECTED");
 
@@ -39,7 +43,11 @@ public class CallService {
 
     public Call rejectCall(String callId) {
 
-        Call call = getCall(callId);
+        Call call = calls.get(callId);
+
+        if (call == null) {
+            throw new RuntimeException("Call not found");
+        }
 
         call.setStatus("REJECTED");
 
@@ -48,7 +56,11 @@ public class CallService {
 
     public Call endCall(String callId) {
 
-        Call call = getCall(callId);
+        Call call = calls.get(callId);
+
+        if (call == null) {
+            throw new RuntimeException("Call not found");
+        }
 
         call.setStatus("ENDED");
 
@@ -57,12 +69,6 @@ public class CallService {
 
     public Call getCall(String callId) {
 
-        Call call = calls.get(callId);
-
-        if (call == null) {
-            throw new RuntimeException("Call not found: " + callId);
-        }
-
-        return call;
+        return calls.get(callId);
     }
 }
