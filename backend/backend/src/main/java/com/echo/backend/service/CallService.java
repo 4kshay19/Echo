@@ -71,4 +71,17 @@ public class CallService {
 
         return calls.get(callId);
     }
+    public Call getIncomingCall(String receiverId) {
+
+    for (Call call : calls.values()) {
+
+        if (call.getReceiverId().equals(receiverId)
+                && call.getStatus().equals("RINGING")) {
+
+            return call;
+        }
+    }
+
+    return null;
+  }
 }

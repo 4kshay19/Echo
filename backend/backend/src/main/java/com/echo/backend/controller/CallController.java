@@ -46,4 +46,9 @@ public class CallController {
 
         return callService.getCall(callId);
     }
+    @GetMapping("/incoming/{receiverId}")
+public Call getIncomingCall(@PathVariable String receiverId) {
+
+    return callService.getIncomingCall(receiverId);
+  }
 }
