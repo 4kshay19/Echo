@@ -83,7 +83,7 @@
 
                 <button
                     class="icon-button"
-                    onclick="startCall()"
+                    onclick="testCallButton()"
                     title="Voice Call">
                     📞
                 </button>
@@ -190,20 +190,19 @@
 
         <div class="call-controls">
 
-            <button
-                class="call-control"
-                onclick="toggleMute()"
-                id="muteButton">
-                🎤
-            </button>
+    <button
+        class="call-control"
+        onclick="toggleMute(this)">
+        🎤
+    </button>
 
-            <button
-                class="end-call"
-                onclick="endCall()">
-                📞
-            </button>
+    <button
+        class="end-call"
+        onclick="endCall()">
+        📞
+    </button>
 
-        </div>
+</div>
 
     </div>
 
@@ -220,9 +219,9 @@
             B
         </div>
 
-        <h2>User B</h2>
+        <h2 id="incomingCallUser">User A</h2>
 
-        <p>Incoming voice call...</p>
+        <p id="incomingCallStatus">Incoming call...</p>
 
         <div class="incoming-actions">
 
@@ -235,7 +234,7 @@
             <button
                 class="reject-call"
                 onclick="rejectIncomingCall()">
-                📕
+                ❌
             </button>
 
         </div>
