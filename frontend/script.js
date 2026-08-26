@@ -1,5 +1,17 @@
 const API_URL = "http://localhost:8080";
 
+let peerConnection = null;
+let localStream = null;
+let remoteStream = null;
+
+const rtcConfiguration = {
+    iceServers: [
+        {
+            urls: "stun:stun.l.google.com:19302"
+        }
+    ]
+};
+
 let currentCallId = null;
 let callInterval = null;
 let callSeconds = 0;
@@ -636,7 +648,7 @@ document.addEventListener(
     }
 );
 async function testCallButton() {
-
+  
     try {
 
         const response = await fetch(
@@ -675,4 +687,89 @@ function showCallScreen() {
     }
 
     overlay.style.display = "flex";
+}
+async function initializeAudio() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false
+        });
+
+        console.log("Microphone access granted");
+
+        localStream.getAudioTracks().forEach(track => {
+            console.log("Audio track:", track.label);
+        });
+
+    } catch (error) {
+        console.error("Microphone access failed:", error);
+        alert("Microphone permission is required for voice calls.");
+    }
+}
+async function testMicrophone() {
+    await initializeAudio();
+
+    if (localStream) {
+        createPeerConnection();
+    }
+}
+function createPeerConnection() {
+
+    peerConnection = new RTCPeerConnection(rtcConfiguration);
+
+    localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+    });
+
+    peerConnection.ontrack = event => {
+
+        remoteStream = event.streams[0];
+
+        console.log("Remote audio stream received");
+    };
+
+    peerConnection.onicecandidate = event => {
+
+        if (event.candidate) {
+            console.log("ICE candidate:", event.candidate);
+        }
+    };
+
+    peerConnection.onconnectionstatechange = () => {
+
+        console.log(
+            "WebRTC connection state:",
+            peerConnection.connectionState
+        );
+    };
+
+    console.log("WebRTC peer connection created");
+}
+async function testCallButton() {
+    console.log("Voice Call button clicked");
+
+    try {
+        const response = await fetch(
+            `${API_URL}/api/calls/start?callerId=userA&receiverId=userB`,
+            {
+                method: "POST"
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`Call start failed: ${response.status}`);
+        }
+
+        const call = await response.json();
+
+        console.log("Call started:", call);
+
+        currentCallId = call.callId;
+
+        showCallOverlay(call);
+
+    } catch (error) {
+        console.error("Unable to start call:", error);
+        alert("Unable to start call. Make sure the Echo backend is running.");
+    }
 }
