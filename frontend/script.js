@@ -169,6 +169,7 @@ async function startCall() {
 
         currentCallId = call.callId;
 
+        startCallStatusPolling();
         const callOverlay =
             document.getElementById("callOverlay");
 
@@ -771,5 +772,86 @@ async function testCallButton() {
     } catch (error) {
         console.error("Unable to start call:", error);
         alert("Unable to start call. Make sure the Echo backend is running.");
+    }
+}
+let callStatusInterval = null;
+
+function startCallStatusPolling() {
+
+    if (callStatusInterval) {
+        clearInterval(callStatusInterval);
+    }
+
+    callStatusInterval = setInterval(async () => {
+
+        if (!currentCallId) {
+            return;
+        }
+
+        try {
+
+            const response = await fetch(
+                `${API_URL}/api/calls/${currentCallId}`
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const call = await response.json();
+
+            console.log("Call status:", call.status);
+
+            if (call.status === "CONNECTED") {
+
+                updateCallStatus("CONNECTED");
+
+                if (!callTimerInterval) {
+                    startCallTimer();
+                }
+            }
+
+            if (call.status === "ENDED" ||
+                call.status === "REJECTED") {
+
+                stopCallTimer();
+
+                closeCallScreen();
+
+                clearInterval(callStatusInterval);
+                callStatusInterval = null;
+
+                currentCallId = null;
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Call status check failed:",
+                error
+            );
+        }
+
+    }, 1000);
+}
+function updateCallStatus(status) {
+
+    const callStatus =
+        document.getElementById("callStatus");
+
+    if (!callStatus) {
+        return;
+    }
+
+    if (status === "RINGING") {
+        callStatus.textContent = "Calling...";
+    }
+
+    if (status === "CONNECTED") {
+        callStatus.textContent = "Connected";
+    }
+
+    if (status === "ENDED") {
+        callStatus.textContent = "Call ended";
     }
 }
