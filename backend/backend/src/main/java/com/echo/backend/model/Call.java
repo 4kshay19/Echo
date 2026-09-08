@@ -6,6 +6,24 @@ public class Call {
     private String callerId;
     private String receiverId;
     private String status;
+    private String offer;
+    private String answer;
+
+    public String getOffer() {
+    return offer;
+}
+
+public void setOffer(String offer) {
+    this.offer = offer;
+}
+
+public String getAnswer() {
+    return answer;
+}
+
+public void setAnswer(String answer) {
+    this.answer = answer;
+}
 
     public Call() {
     }

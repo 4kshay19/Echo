@@ -1,10 +1,12 @@
 const API_URL = "http://localhost:8080";
 
+let currentCallId = null;
 let peerConnection = null;
 let localStream = null;
-let remoteStream = null;
+let callTimer = null;
+let callSeconds = 0;
 
-const rtcConfiguration = {
+const rtcConfig = {
     iceServers: [
         {
             urls: "stun:stun.l.google.com:19302"
@@ -12,644 +14,310 @@ const rtcConfiguration = {
     ]
 };
 
-let currentCallId = null;
-let callInterval = null;
-let callSeconds = 0;
-
-
-// ===============================
-// MESSAGE FUNCTIONS
-// ===============================
-
-function handleEnter(event) {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        sendMessage();
-    }
+function get(id) {
+    return document.getElementById(id);
 }
 
+function showCallScreen() {
 
-async function sendMessage() {
+    const overlay = get("callOverlay");
 
-    const input = document.getElementById("messageInput");
-
-    if (!input) {
-        return;
+    if (overlay) {
+        overlay.style.display = "flex";
     }
 
-    const message = input.value.trim();
-
-    if (!message) {
-        return;
-    }
-
-    const messages = document.getElementById("messages");
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/api/communication/message`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    userId: "userA",
-                    message: message,
-                    sourceLanguage: "en",
-                    targetLanguage: "ta"
-                })
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        addMessage(
-            data.translatedMessage || message,
-            "sent"
-        );
-
-        input.value = "";
-
-    } catch (error) {
-
-        console.error("Message sending failed:", error);
-
-        addMessage(message, "sent");
-
-        input.value = "";
-    }
+    startTimer();
 }
 
+function hideCallScreen() {
 
-function addMessage(text, type) {
+    const overlay = get("callOverlay");
 
-    const messages = document.getElementById("messages");
-
-    if (!messages) {
-        return;
-    }
-
-    const message = document.createElement("div");
-
-    message.className = `message ${type}`;
-
-    const bubble = document.createElement("div");
-
-    bubble.className = "bubble";
-
-    const time = new Date().toLocaleTimeString(
-        [],
-        {
-            hour: "2-digit",
-            minute: "2-digit"
-        }
-    );
-
-    bubble.innerHTML = `
-        ${escapeHTML(text)}
-        <span class="time">${time}</span>
-    `;
-
-    message.appendChild(bubble);
-
-    messages.appendChild(message);
-
-    messages.scrollTop = messages.scrollHeight;
-}
-
-
-function escapeHTML(text) {
-
-    const div = document.createElement("div");
-
-    div.textContent = text;
-
-    return div.innerHTML;
-}
-
-
-// ===============================
-// START VOICE CALL
-// ===============================
-
-async function startCall() {
-
-    if (currentCallId) {
-
-        console.log("A call is already active");
-
-        return;
-    }
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/api/calls/start?callerId=userA&receiverId=userB`,
-            {
-                method: "POST"
-            }
-        );
-
-        if (!response.ok) {
-
-            throw new Error(
-                `HTTP ${response.status}`
-            );
-        }
-
-        const call = await response.json();
-
-        console.log("Call started:", call);
-
-        currentCallId = call.callId;
-
-        startCallStatusPolling();
-        const callOverlay =
-            document.getElementById("callOverlay");
-
-        const callUser =
-            document.getElementById("callUser");
-
-        const callStatus =
-            document.getElementById("callStatus");
-
-        const callTimer =
-            document.getElementById("callTimer");
-
-        if (callUser) {
-
-            callUser.textContent =
-                call.receiverId || "User B";
-        }
-
-        if (callStatus) {
-
-            callStatus.textContent =
-                "Calling...";
-        }
-
-        if (callTimer) {
-
-            callTimer.textContent =
-                "00:00";
-        }
-
-        if (callOverlay) {
-
-            callOverlay.style.display =
-                "flex";
-
-        } else {
-
-            console.error(
-                "callOverlay not found"
-            );
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Start call failed:",
-            error
-        );
+    if (overlay) {
+        overlay.style.display = "none";
     }
 }
-
-
-// ===============================
-// CHECK INCOMING CALL
-// ===============================
-
-async function checkIncomingCall() {
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/api/calls/incoming/userB`
-        );
-
-        if (!response.ok) {
-
-            return;
-        }
-
-        const call = await response.json();
-
-        if (
-            call &&
-            call.status === "RINGING" &&
-            !currentCallId
-        ) {
-
-            console.log(
-                "Incoming call detected:",
-                call
-            );
-
-            currentCallId =
-                call.callId;
-
-            showIncomingCall(call);
-        }
-
-    } catch (error) {
-
-        console.error(
-            "Incoming call check failed:",
-            error
-        );
-    }
-}
-
-
-// Check for incoming calls every 2 seconds
-
-setInterval(
-    checkIncomingCall,
-    2000
-);
-
-
-// ===============================
-// SHOW INCOMING CALL
-// ===============================
 
 function showIncomingCall(call) {
 
-    const overlay =
-        document.getElementById(
-            "incomingOverlay"
-        );
-
-    const callUser =
-        document.getElementById(
-            "incomingCallUser"
-        );
-
-    const callStatus =
-        document.getElementById(
-            "incomingCallStatus"
-        );
+    const overlay = get("incomingOverlay");
+    const callUser = get("callUser");
+    const callStatus = get("callStatus");
 
     if (!overlay) {
-
-        console.error(
-            "incomingOverlay not found"
-        );
-
         return;
     }
 
     if (callUser) {
-
-        callUser.textContent =
-            call.callerId || "User A";
+        callUser.textContent = call.callerId || "User A";
     }
 
     if (callStatus) {
-
-        callStatus.textContent =
-            "Incoming call...";
+        callStatus.textContent = "Incoming call...";
     }
 
-    overlay.style.display =
-        "flex";
+    overlay.style.display = "flex";
 }
 
+function hideIncomingCall() {
 
-// ===============================
-// ACCEPT INCOMING CALL
-// ===============================
+    const overlay = get("incomingOverlay");
 
-async function acceptIncomingCall() {
-
-    if (!currentCallId) {
-
-        console.error(
-            "No incoming call found"
-        );
-
-        return;
-    }
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/api/calls/${currentCallId}/accept`,
-            {
-                method: "POST"
-            }
-        );
-
-        if (!response.ok) {
-
-            throw new Error(
-                `HTTP ${response.status}`
-            );
-        }
-
-        const call =
-            await response.json();
-
-        console.log(
-            "Call accepted:",
-            call
-        );
-
-        const incomingOverlay =
-            document.getElementById(
-                "incomingOverlay"
-            );
-
-        if (incomingOverlay) {
-
-            incomingOverlay.style.display =
-                "none";
-        }
-
-        openCallScreen(
-            call.callerId || "User A",
-            "Connected"
-        );
-
-        startCallTimer();
-
-    } catch (error) {
-
-        console.error(
-            "Accept call failed:",
-            error
-        );
+    if (overlay) {
+        overlay.style.display = "none";
     }
 }
 
+function startTimer() {
 
-// ===============================
-// REJECT INCOMING CALL
-// ===============================
-
-async function rejectIncomingCall() {
-
-    if (!currentCallId) {
-
-        console.error(
-            "No incoming call found"
-        );
-
-        return;
-    }
-
-    try {
-
-        const response = await fetch(
-            `${API_URL}/api/calls/${currentCallId}/reject`,
-            {
-                method: "POST"
-            }
-        );
-
-        if (!response.ok) {
-
-            throw new Error(
-                `HTTP ${response.status}`
-            );
-        }
-
-        const call =
-            await response.json();
-
-        console.log(
-            "Call rejected:",
-            call
-        );
-
-        const incomingOverlay =
-            document.getElementById(
-                "incomingOverlay"
-            );
-
-        if (incomingOverlay) {
-
-            incomingOverlay.style.display =
-                "none";
-        }
-
-        currentCallId = null;
-
-    } catch (error) {
-
-        console.error(
-            "Reject call failed:",
-            error
-        );
-    }
-}
-
-
-// ===============================
-// OPEN CALL SCREEN
-// ===============================
-
-function openCallScreen(
-    user,
-    status
-) {
-
-    const callOverlay =
-        document.getElementById(
-            "callOverlay"
-        );
-
-    const callUser =
-        document.getElementById(
-            "callUser"
-        );
-
-    const callStatus =
-        document.getElementById(
-            "callStatus"
-        );
-
-    if (callUser) {
-
-        callUser.textContent =
-            user || "User B";
-    }
-
-    if (callStatus) {
-
-        callStatus.textContent =
-            status || "Connected";
-    }
-
-    if (callOverlay) {
-
-        callOverlay.style.display =
-            "flex";
-    }
-}
-
-
-// ===============================
-// CALL TIMER
-// ===============================
-
-function startCallTimer() {
-
-    clearInterval(
-        callInterval
-    );
+    clearInterval(callTimer);
 
     callSeconds = 0;
 
-    const timer =
-        document.getElementById(
-            "callTimer"
-        );
+    updateTimer();
 
-    if (timer) {
+    callTimer = setInterval(() => {
 
-        timer.textContent =
-            "00:00";
-    }
+        callSeconds++;
 
-    callInterval =
-        setInterval(
-            () => {
+        updateTimer();
 
-                callSeconds++;
-
-                const minutes =
-                    Math.floor(
-                        callSeconds / 60
-                    );
-
-                const seconds =
-                    callSeconds % 60;
-
-                if (timer) {
-
-                    timer.textContent =
-                        `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-                }
-
-            },
-            1000
-        );
+    }, 1000);
 }
 
+function updateTimer() {
 
-// ===============================
-// END CALL
-// ===============================
+    const timer = get("callTimer");
 
-async function endCall() {
-
-    if (!currentCallId) {
-
-        console.error(
-            "No active call"
-        );
-
+    if (!timer) {
         return;
     }
+
+    const minutes =
+        String(Math.floor(callSeconds / 60)).padStart(2, "0");
+
+    const seconds =
+        String(callSeconds % 60).padStart(2, "0");
+
+    timer.textContent = `${minutes}:${seconds}`;
+}
+
+function stopTimer() {
+
+    clearInterval(callTimer);
+
+    callTimer = null;
+}
+
+async function startMicrophone() {
+
+    try {
+
+        localStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: false
+        });
+
+        console.log("Microphone access granted");
+
+        return localStream;
+
+    } catch (error) {
+
+        console.error("Microphone access failed:", error);
+
+        alert("Please allow microphone access.");
+
+        return null;
+    }
+}
+
+function createPeerConnection() {
+
+    peerConnection = new RTCPeerConnection(rtcConfig);
+
+    if (localStream) {
+
+        localStream.getTracks().forEach(track => {
+
+            peerConnection.addTrack(
+                track,
+                localStream
+            );
+
+        });
+    }
+
+    peerConnection.ontrack = event => {
+
+        console.log("Remote audio received");
+
+        let audio = get("remoteAudio");
+
+        if (!audio) {
+
+            audio = document.createElement("audio");
+
+            audio.id = "remoteAudio";
+
+            audio.autoplay = true;
+
+            document.body.appendChild(audio);
+        }
+
+        audio.srcObject = event.streams[0];
+    };
+
+    peerConnection.onicecandidate = event => {
+
+        if (event.candidate) {
+
+            console.log(
+                "ICE candidate generated:",
+                event.candidate
+            );
+
+        }
+    };
+
+    peerConnection.onconnectionstatechange = () => {
+
+        console.log(
+            "WebRTC connection:",
+            peerConnection.connectionState
+        );
+
+        if (
+            peerConnection.connectionState ===
+            "connected"
+        ) {
+
+            console.log("WebRTC voice connection established");
+        }
+
+        if (
+            peerConnection.connectionState ===
+            "failed"
+        ) {
+
+            console.error("WebRTC connection failed");
+        }
+    };
+
+    console.log("WebRTC peer connection created");
+
+    return peerConnection;
+}
+
+async function sendOfferToBackend(offer) {
 
     try {
 
         const response = await fetch(
-            `${API_URL}/api/calls/${currentCallId}/end`,
+            `${API_URL}/api/calls/${currentCallId}/offer`,
             {
-                method: "POST"
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(offer)
             }
         );
 
         if (!response.ok) {
-
-            throw new Error(
-                `HTTP ${response.status}`
-            );
+            throw new Error("Failed to send offer");
         }
 
-        const call =
-            await response.json();
+        const call = await response.json();
 
         console.log(
-            "Call ended:",
+            "WebRTC offer sent to backend:",
             call
         );
 
-        // Stop timer
-
-        clearInterval(
-            callInterval
-        );
-
-        callInterval = null;
-
-        // Reset timer
-
-        callSeconds = 0;
-
-        const timer =
-            document.getElementById(
-                "callTimer"
-            );
-
-        if (timer) {
-
-            timer.textContent =
-                "00:00";
-        }
-
-        // Hide call screen
-
-        const callOverlay =
-            document.getElementById(
-                "callOverlay"
-            );
-
-        if (callOverlay) {
-
-            callOverlay.style.display =
-                "none";
-        }
-
-        // Clear current call
-
-        currentCallId = null;
+        return call;
 
     } catch (error) {
 
         console.error(
-            "End call failed:",
+            "Offer signaling failed:",
             error
         );
+
+        return null;
     }
 }
 
+async function sendAnswerToBackend(answer) {
 
-// ===============================
-// INITIALIZATION
-// ===============================
+    try {
 
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
+        const response = await fetch(
+            `${API_URL}/api/calls/${currentCallId}/answer`,
+            {
+                method: "POST",
 
-        console.log(
-            "Echo frontend initialized"
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(answer)
+            }
         );
 
+        if (!response.ok) {
+            throw new Error("Failed to send answer");
+        }
+
+        const call = await response.json();
+
+        console.log(
+            "WebRTC answer sent to backend:",
+            call
+        );
+
+        return call;
+
+    } catch (error) {
+
+        console.error(
+            "Answer signaling failed:",
+            error
+        );
+
+        return null;
     }
-);
+}
+
+async function getCallFromBackend(callId) {
+
+    try {
+
+        const response = await fetch(
+            `${API_URL}/api/calls/${callId}`
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to get call");
+        }
+
+        return await response.json();
+
+    } catch (error) {
+
+        console.error(
+            "Get call failed:",
+            error
+        );
+
+        return null;
+    }
+}
+
 async function testCallButton() {
-  
+
     try {
 
         const response = await fetch(
@@ -669,189 +337,294 @@ async function testCallButton() {
 
         console.log("Call started:", call);
 
+        const stream = await startMicrophone();
+
+        if (!stream) {
+            return;
+        }
+
+        createPeerConnection();
+
+        const offer =
+            await peerConnection.createOffer();
+
+        await peerConnection.setLocalDescription(
+            offer
+        );
+
+        console.log(
+            "WebRTC offer created:",
+            offer
+        );
+
+        await sendOfferToBackend(offer);
+
         showCallScreen();
+
+        console.log("Waiting for User B to accept...");
 
     } catch (error) {
 
-        console.error("Call start failed:", error);
+        console.error(
+            "Call start failed:",
+            error
+        );
 
         alert("Unable to start call");
     }
 }
-function showCallScreen() {
 
-    const overlay = document.getElementById("callOverlay");
+async function checkIncomingCall() {
 
-    if (!overlay) {
-        console.error("callOverlay not found");
-        return;
-    }
-
-    overlay.style.display = "flex";
-}
-async function initializeAudio() {
     try {
-        localStream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: false
-        });
 
-        console.log("Microphone access granted");
+        const response = await fetch(
+            `${API_URL}/api/calls/incoming/userB`
+        );
 
-        localStream.getAudioTracks().forEach(track => {
-            console.log("Audio track:", track.label);
-        });
+        if (
+            response.status === 204 ||
+            !response.ok
+        ) {
+            return;
+        }
+
+        const call = await response.json();
+
+        if (
+            call &&
+            call.status === "RINGING" &&
+            !currentCallId
+        ) {
+
+            console.log(
+                "Incoming call detected:",
+                call
+            );
+
+            currentCallId = call.callId;
+
+            showIncomingCall(call);
+        }
 
     } catch (error) {
-        console.error("Microphone access failed:", error);
-        alert("Microphone permission is required for voice calls.");
-    }
-}
-async function testMicrophone() {
-    await initializeAudio();
 
-    if (localStream) {
-        createPeerConnection();
-    }
-}
-function createPeerConnection() {
-
-    peerConnection = new RTCPeerConnection(rtcConfiguration);
-
-    localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStream);
-    });
-
-    peerConnection.ontrack = event => {
-
-        remoteStream = event.streams[0];
-
-        console.log("Remote audio stream received");
-    };
-
-    peerConnection.onicecandidate = event => {
-
-        if (event.candidate) {
-            console.log("ICE candidate:", event.candidate);
-        }
-    };
-
-    peerConnection.onconnectionstatechange = () => {
-
-        console.log(
-            "WebRTC connection state:",
-            peerConnection.connectionState
+        console.error(
+            "Incoming call check failed:",
+            error
         );
-    };
-
-    console.log("WebRTC peer connection created");
+    }
 }
-async function testCallButton() {
-    console.log("Voice Call button clicked");
+
+async function acceptIncomingCall() {
 
     try {
+
+        if (!currentCallId) {
+
+            console.error(
+                "No active call ID"
+            );
+
+            return;
+        }
+
+        console.log(
+            "Accepting call:",
+            currentCallId
+        );
+
         const response = await fetch(
-            `${API_URL}/api/calls/start?callerId=userA&receiverId=userB`,
+            `${API_URL}/api/calls/${currentCallId}/accept`,
             {
                 method: "POST"
             }
         );
 
         if (!response.ok) {
-            throw new Error(`Call start failed: ${response.status}`);
+            throw new Error("Failed to accept call");
         }
 
         const call = await response.json();
 
-        console.log("Call started:", call);
+        console.log(
+            "Call accepted:",
+            call
+        );
 
-        currentCallId = call.callId;
+        const stream =
+            await startMicrophone();
 
-        showCallOverlay(call);
+        if (!stream) {
+            return;
+        }
+
+        createPeerConnection();
+
+        const latestCall =
+            await getCallFromBackend(
+                currentCallId
+            );
+
+        if (
+            !latestCall ||
+            !latestCall.offer
+        ) {
+
+            console.error(
+                "No WebRTC offer received"
+            );
+
+            return;
+        }
+
+        console.log(
+            "WebRTC offer received"
+        );
+
+        const offer =
+            JSON.parse(latestCall.offer);
+
+        await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(offer)
+        );
+
+        console.log(
+            "Remote offer applied"
+        );
+
+        const answer =
+            await peerConnection.createAnswer();
+
+        await peerConnection.setLocalDescription(
+            answer
+        );
+
+        console.log(
+            "WebRTC answer created"
+        );
+
+        await sendAnswerToBackend(answer);
+
+        hideIncomingCall();
+
+        showCallScreen();
+
+        console.log(
+            "Call connected"
+        );
 
     } catch (error) {
-        console.error("Unable to start call:", error);
-        alert("Unable to start call. Make sure the Echo backend is running.");
+
+        console.error(
+            "Accept call failed:",
+            error
+        );
+
+        alert("Unable to accept call");
     }
 }
-let callStatusInterval = null;
 
-function startCallStatusPolling() {
+async function rejectIncomingCall() {
 
-    if (callStatusInterval) {
-        clearInterval(callStatusInterval);
-    }
-
-    callStatusInterval = setInterval(async () => {
+    try {
 
         if (!currentCallId) {
             return;
         }
 
-        try {
-
-            const response = await fetch(
-                `${API_URL}/api/calls/${currentCallId}`
-            );
-
-            if (!response.ok) {
-                return;
+        const response = await fetch(
+            `${API_URL}/api/calls/${currentCallId}/reject`,
+            {
+                method: "POST"
             }
+        );
 
-            const call = await response.json();
-
-            console.log("Call status:", call.status);
-
-            if (call.status === "CONNECTED") {
-
-                updateCallStatus("CONNECTED");
-
-                if (!callTimerInterval) {
-                    startCallTimer();
-                }
-            }
-
-            if (call.status === "ENDED" ||
-                call.status === "REJECTED") {
-
-                stopCallTimer();
-
-                closeCallScreen();
-
-                clearInterval(callStatusInterval);
-                callStatusInterval = null;
-
-                currentCallId = null;
-            }
-
-        } catch (error) {
-
-            console.error(
-                "Call status check failed:",
-                error
-            );
+        if (!response.ok) {
+            throw new Error("Failed to reject call");
         }
 
-    }, 1000);
-}
-function updateCallStatus(status) {
+        console.log("Call rejected");
 
-    const callStatus =
-        document.getElementById("callStatus");
+        hideIncomingCall();
 
-    if (!callStatus) {
-        return;
-    }
+        currentCallId = null;
 
-    if (status === "RINGING") {
-        callStatus.textContent = "Calling...";
-    }
+    } catch (error) {
 
-    if (status === "CONNECTED") {
-        callStatus.textContent = "Connected";
-    }
-
-    if (status === "ENDED") {
-        callStatus.textContent = "Call ended";
+        console.error(
+            "Reject call failed:",
+            error
+        );
     }
 }
+
+async function endCall() {
+
+    try {
+
+        if (!currentCallId) {
+            return;
+        }
+
+        const response = await fetch(
+            `${API_URL}/api/calls/${currentCallId}/end`,
+            {
+                method: "POST"
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to end call");
+        }
+
+        const call = await response.json();
+
+        console.log(
+            "Call ended:",
+            call
+        );
+
+    } catch (error) {
+
+        console.error(
+            "End call failed:",
+            error
+        );
+
+    } finally {
+
+        stopTimer();
+
+        hideCallScreen();
+
+        if (peerConnection) {
+
+            peerConnection.close();
+
+            peerConnection = null;
+        }
+
+        if (localStream) {
+
+            localStream.getTracks().forEach(
+                track => track.stop()
+            );
+
+            localStream = null;
+        }
+
+        currentCallId = null;
+
+        const timer = get("callTimer");
+
+        if (timer) {
+            timer.textContent = "00:00";
+        }
+    }
+}
+
+setInterval(
+    checkIncomingCall,
+    2000
+);
