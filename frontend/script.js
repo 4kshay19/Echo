@@ -5,6 +5,7 @@ let peerConnection = null;
 let localStream = null;
 let callTimer = null;
 let callSeconds = 0;
+let isMuted = false;
 
 const rtcConfig = {
     iceServers: [
@@ -628,3 +629,23 @@ setInterval(
     checkIncomingCall,
     2000
 );
+
+async function toggleMute() {
+    try {
+        if (!localStream) {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+        }
+
+        const audioTrack = localStream.getAudioTracks()[0];
+
+        isMuted = !isMuted;
+        audioTrack.enabled = !isMuted;
+
+        console.log(isMuted ? "Microphone muted" : "Microphone unmuted");
+
+    } catch (error) {
+        console.error("Microphone error:", error);
+    }
+}
