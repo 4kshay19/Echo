@@ -62,7 +62,7 @@ function showIncomingCall(call) {
 
 function hideIncomingCall() {
 
-    const overlay = get("incomingOverlay");
+    const overlay = document.getElementById("incomingOverlay");
 
     if (overlay) {
         overlay.style.display = "none";
@@ -525,15 +525,53 @@ async function acceptIncomingCall() {
         alert("Unable to accept call");
     }
 }
-
-async function rejectIncomingCall() {
+async function checkCallStatus() {
+    if (!currentCallId) return;
 
     try {
+        const response = await fetch(
+            `${API_URL}/api/calls/${currentCallId}`
+        );
 
-        if (!currentCallId) {
-            return;
+        if (!response.ok) return;
+
+        const call = await response.json();
+
+        console.log("Call status:", call.status);
+
+        if (call.status === "REJECTED") {
+            clearInterval(callTimer);
+            alert("Call Rejected");
+            hideCallScreen();
+            currentCallId = null;
         }
 
+        if (call.status === "ENDED") {
+            clearInterval(callTimer);
+            alert("Call Ended");
+            hideCallScreen();
+            currentCallId = null;
+        }
+
+    } catch (error) {
+        console.error("Call status check failed:", error);
+    }
+}
+currentCallId = call.callId;
+
+console.log("Call started:", call);
+
+showCallScreen();
+
+setInterval(checkCallStatus, 1000);
+
+async function rejectIncomingCall() {
+    if (!currentCallId) {
+        hideIncomingCall();
+        return;
+    }
+
+    try {
         const response = await fetch(
             `${API_URL}/api/calls/${currentCallId}/reject`,
             {
@@ -547,16 +585,11 @@ async function rejectIncomingCall() {
 
         console.log("Call rejected");
 
+        currentCallId = null;
         hideIncomingCall();
 
-        currentCallId = null;
-
     } catch (error) {
-
-        console.error(
-            "Reject call failed:",
-            error
-        );
+        console.error("Reject call failed:", error);
     }
 }
 

@@ -3,10 +3,7 @@ package com.echo.backend.controller;
 import com.echo.backend.model.Call;
 import com.echo.backend.service.CallService;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/calls")
@@ -20,91 +17,45 @@ public class CallController {
     }
 
     @PostMapping("/start")
-    public ResponseEntity<Call> startCall(
+    public Call startCall(
             @RequestParam String callerId,
             @RequestParam String receiverId) {
 
-        Call call = callService.startCall(callerId, receiverId);
-
-        return ResponseEntity.ok(call);
+        return callService.startCall(callerId, receiverId);
     }
 
     @GetMapping("/incoming/{receiverId}")
-    public ResponseEntity<?> getIncomingCall(
+    public Call getIncomingCall(
             @PathVariable String receiverId) {
 
-        List<Call> calls = callService.getIncomingCalls(receiverId);
+        return callService.getIncomingCall(receiverId);
+    }
 
-        if (calls == null || calls.isEmpty()) {
-            return ResponseEntity.noContent().build();
-        }
+    @GetMapping("/{callId}")
+    public Call getCall(
+            @PathVariable String callId) {
 
-        return ResponseEntity.ok(calls.get(0));
+        return callService.getCall(callId);
     }
 
     @PostMapping("/{callId}/accept")
-    public ResponseEntity<Call> acceptCall(
+    public Call acceptCall(
             @PathVariable String callId) {
 
-        Call call = callService.acceptCall(callId);
-
-        if (call == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok(call);
+        return callService.acceptCall(callId);
     }
 
     @PostMapping("/{callId}/reject")
-    public ResponseEntity<Call> rejectCall(
+    public Call rejectCall(
             @PathVariable String callId) {
 
-        Call call = callService.rejectCall(callId);
-
-        if (call == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok(call);
+        return callService.rejectCall(callId);
     }
 
     @PostMapping("/{callId}/end")
-    public ResponseEntity<Call> endCall(
+    public Call endCall(
             @PathVariable String callId) {
 
-        Call call = callService.endCall(callId);
-
-        if (call == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok(call);
+        return callService.endCall(callId);
     }
-    @PostMapping("/{callId}/offer")
-public ResponseEntity<Call> saveOffer(
-        @PathVariable String callId,
-        @RequestBody String offer) {
-
-    Call call = callService.saveOffer(callId, offer);
-
-    if (call == null) {
-        return ResponseEntity.notFound().build();
-    }
-
-    return ResponseEntity.ok(call);
-}
-
-@PostMapping("/{callId}/answer")
-public ResponseEntity<Call> saveAnswer(
-        @PathVariable String callId,
-        @RequestBody String answer) {
-
-    Call call = callService.saveAnswer(callId, answer);
-
-    if (call == null) {
-        return ResponseEntity.notFound().build();
-    }
-
-    return ResponseEntity.ok(call);
-}
 }
